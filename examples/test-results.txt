@@ -1,0 +1,17 @@
+# 测试结果记录（自动生成）
+
+## 离线确定性测试：python -m pytest -q
+```
+....................................................                     [100%]
+52 passed, 2 deselected in 1.24s
+```
+
+## 真实模型冒烟：python -m pytest -q -m real_model
+```
+..                                                                       [100%]
+2 passed, 52 deselected in 12.02s
+```
+
+## 环境
+Python 3.12.10
+openai 2.54.0 | pytest 9.2.0

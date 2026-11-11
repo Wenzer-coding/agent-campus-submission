@@ -111,3 +111,26 @@ def test_no_citation_statuses_skip_grounding():
     p = normalize_payload({"status": "tool_failure", "answer_text": "工具失败", "citations": []})
     ok, errs = validate_submission(p, ObservationLedger())
     assert ok, errs
+
+
+def test_no_citation_status_rejects_citations():
+    """not_in_corpus/tool_failure 携带引用必须被拒绝（防伪造引用绕道）。"""
+    p = normalize_payload(
+        {
+            "status": "not_in_corpus",
+            "answer_text": "无资料",
+            "gaps": ["x"],
+            "citations": [{"doc_id": "D99", "version_date": "2099-01-01", "quote": "编造"}],
+        }
+    )
+    assert any("必须为空" in e for e in validate_payload(p))
+
+
+def test_confirmation_requires_two_citations():
+    p = {
+        "status": "needs_user_confirmation",
+        "answer_text": "冲突",
+        "followup_question": "适用哪份？",
+        "citations": [{"doc_id": "D01", "version_date": "2024-06-01", "quote": "q1"}],
+    }
+    assert any("≥ 2" in e for e in validate_payload(p))

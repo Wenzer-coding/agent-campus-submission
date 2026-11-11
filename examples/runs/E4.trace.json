@@ -3,11 +3,15 @@
   "backend": "deepseek",
   "model": "deepseek-chat",
   "corpus_dir": "data/docs",
-  "corpus_hash": "cf6506ce41207c848d75ebcdb891b6e7d15721f504c1f20a8c7f9a1775ae9452",
+  "corpus_hash": "ae1cd75b86a384276d8812c63c6c3ea73d1644e4891d3a6dd83fb6be7495189a",
   "fault_injection": "",
   "max_steps": 8,
-  "timestamp": "2026-11-11T17:23:10",
+  "timestamp": "2026-11-11T17:39:11",
   "python": "3.12.10",
+  "dependencies": {
+    "openai": "2.54.0",
+    "pytest": "9.2.0"
+  },
   "turns": [
     {
       "turn_index": 0,
@@ -18,12 +22,12 @@
           "turn_index": 0,
           "tool_name": "doc_search",
           "tool_args": {
-            "query": "出差住宿费标准 酒店每晚限额",
+            "query": "出差住宿费标准 每晚限额",
             "top_k": 10
           },
-          "assistant_rationale": "我先检索公司差旅住宿费标准相关制度。",
-          "observation_summary": "命中 1 篇 ['D06']；best_score=0.3056",
-          "observation_sha256": "984a405824f2d2b0",
+          "assistant_rationale": "我先检索差旅住宿费标准相关制度。",
+          "observation_summary": "命中 1 篇 ['D06']；best_score=0.3667",
+          "observation_sha256": "892980075a3a5fba",
           "next_action": "doc_list",
           "latency_ms": 0,
           "steps_used": 1,
@@ -36,7 +40,7 @@
           "turn_index": 0,
           "tool_name": "doc_list",
           "tool_args": {},
-          "assistant_rationale": "我先检索公司差旅住宿费标准相关制度。",
+          "assistant_rationale": "我先检索差旅住宿费标准相关制度。",
           "observation_summary": "文档清单 9 篇",
           "observation_sha256": "61dc76db4ad48515",
           "next_action": "doc_read",
@@ -53,7 +57,7 @@
           "tool_args": {
             "doc_id": "D06"
           },
-          "assistant_rationale": "D06 命中住宿标准，但 D01《差旅费用报销管理办法》也可能规定住宿限额，需读取两份原文核对是否存在冲突。",
+          "assistant_rationale": "D06 是专门的住宿标准，但 D01《差旅费用报销管理办法》也可能规定住宿标准，需读取确认是否存在冲突。",
           "observation_summary": "读取 D06 成功（2 小节，版本 2024-03-20）",
           "observation_sha256": "24fdc9b72062d624",
           "next_action": "doc_read",
@@ -70,9 +74,9 @@
           "tool_args": {
             "doc_id": "D01"
           },
-          "assistant_rationale": "D06 命中住宿标准，但 D01《差旅费用报销管理办法》也可能规定住宿限额，需读取两份原文核对是否存在冲突。",
+          "assistant_rationale": "D06 是专门的住宿标准，但 D01《差旅费用报销管理办法》也可能规定住宿标准，需读取确认是否存在冲突。",
           "observation_summary": "读取 D01 成功（3 小节，版本 2024-06-01）",
-          "observation_sha256": "d2c6eb00112c5da2",
+          "observation_sha256": "a9dc77df965a633e",
           "next_action": "doc_search",
           "latency_ms": 0,
           "steps_used": 4,
@@ -85,13 +89,13 @@
           "turn_index": 0,
           "tool_name": "doc_search",
           "tool_args": {
-            "query": "住宿费 每晚 元 限额 报销标准 一线城市",
+            "query": "住宿费 报销限额 元/晚 城市等级",
             "top_k": 10
           },
-          "assistant_rationale": "D01 未给出具体金额，仅指向\"财务标准\"。为排除其他文档（如 D02 费用报销操作指引）另有住宿限额，再做一次确认性检索。",
-          "observation_summary": "命中 1 篇 ['D06']；best_score=0.2889",
-          "observation_sha256": "39ab31b2d91e4be7",
-          "next_action": "doc_read",
+          "assistant_rationale": "D01 未规定具体住宿金额，无冲突。再做一次确认性检索，排除其他文档中的住宿限额说法。",
+          "observation_summary": "命中 0 篇 []；best_score=0.1667",
+          "observation_sha256": "7b9c3d392071d55b",
+          "next_action": "doc_search",
           "latency_ms": 0,
           "steps_used": 5,
           "steps_budget": 8,
@@ -101,13 +105,14 @@
         {
           "step_index": 6,
           "turn_index": 0,
-          "tool_name": "doc_read",
+          "tool_name": "doc_search",
           "tool_args": {
-            "doc_id": "D02"
+            "query": "酒店 住宿 超标 审批",
+            "top_k": 10
           },
-          "assistant_rationale": "D01 未给出具体金额，仅指向\"财务标准\"。为排除其他文档（如 D02 费用报销操作指引）另有住宿限额，再做一次确认性检索。",
-          "observation_summary": "读取 D02 成功（3 小节，版本 2024-08-15）",
-          "observation_sha256": "d64d0794ae4a7fd4",
+          "assistant_rationale": "D01 未规定具体住宿金额，无冲突。再做一次确认性检索，排除其他文档中的住宿限额说法。",
+          "observation_summary": "命中 0 篇 []；best_score=0.1905",
+          "observation_sha256": "b8d604cc4b47b64c",
           "next_action": "submit_answer",
           "latency_ms": 0,
           "steps_used": 6,
@@ -121,7 +126,7 @@
           "tool_name": "submit_answer",
           "tool_args": {
             "status": "answered",
-            "answer_text": "按《差旅住宿标准》，因公出差住宿费上限为：一线城市每晚不超过 400 元，其他城市每晚不超过 300 元，凭票据据实报销。\n\n如因特殊情况需要超出上述标准，须事前取得分管领导的书面批准。\n\n另请注意：差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理（《差旅费用报销管理办法》）。",
+            "answer_text": "根据《差旅住宿标准》，因公出差住宿费上限为：一线城市每晚不超过 400 元，其他城市每晚不超过 300 元，凭票据据实报销。\n\n如因特殊情况需要超出上述标准，须事前获得分管领导书面批准。\n\n另外提醒：差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理。",
             "citations": [
               {
                 "doc_id": "D06",
@@ -140,7 +145,7 @@
               }
             ]
           },
-          "assistant_rationale": "已确认住宿限额仅由 D06 规定，无冲突文档。",
+          "assistant_rationale": "确认性检索未发现其他住宿限额规定，仅 D06 有明确标准。",
           "observation_summary": "submit_answer 校验通过，任务完成",
           "observation_sha256": null,
           "next_action": "终止并交付（answered）",
@@ -156,7 +161,7 @@
       ],
       "final": {
         "status": "answered",
-        "answer_text": "按《差旅住宿标准》，因公出差住宿费上限为：一线城市每晚不超过 400 元，其他城市每晚不超过 300 元，凭票据据实报销。\n\n如因特殊情况需要超出上述标准，须事前取得分管领导的书面批准。\n\n另请注意：差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理（《差旅费用报销管理办法》）。",
+        "answer_text": "根据《差旅住宿标准》，因公出差住宿费上限为：一线城市每晚不超过 400 元，其他城市每晚不超过 300 元，凭票据据实报销。\n\n如因特殊情况需要超出上述标准，须事前获得分管领导书面批准。\n\n另外提醒：差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理。",
         "citations": [
           {
             "doc_id": "D06",

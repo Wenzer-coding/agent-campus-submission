@@ -1,33 +1,40 @@
 # 企业知识问答 Agent（小影校招 AI Agent 开发考核 · 题3）
 
+> **提交信息**：题号 **3（企业知识问答 Agent）** · 仓库 https://github.com/Wenzer-coding/agent-campus-submission · 最终 commit SHA 以提交说明（答题区域/提交说明.txt 或提交表单）为准
+
 一个基于 **模型驱动 ReAct 循环** 的企业制度问答 Agent：检索 → 读取 → 观察 → 动态调整（改写查询 / 继续查证 / 追问 / 拒答 / 交付）。
 
 - **动态决策**：每一步动作（检索、读取、列清单、交付）由模型根据工具返回结果自主选择，循环骨架不含预设分支；
 - **引用保真**：代码级校验——交付中的引用必须是本会话工具真实观察到的逐字原文（伪造 / 拼接 / 错版本一律拒绝，二次失败不交付）；
 - **冲突纪律**：制度冲突且无裁决依据时，列出双方引用并请求用户确认，不擅自选边；
 - **可离线复现**：Mock 后端无密钥可跑（仅验证流程，边界见下文）；
-- **确定性测试**：`pytest` 49 条测试全离线可复现；8 个真实模型运行记录见 `examples/`。
+- **确定性测试**：52 条离线可复现测试 + 2 条真实模型冒烟；8 个真实模型运行记录见 `examples/`。
 
 ---
 
 ## 快速开始
+
+> 以下命令均在**仓库根目录**执行。
 
 ```bash
 # 1. 安装（Python 3.10+，实测 3.12.10）
 pip install -r requirements.txt -r requirements-dev.txt
 
 # 2. 配置真实模型（可选；不配置会自动回落 Mock）
-cp .env.example .env        # 填写 DEEPSEEK_API_KEY（Windows 可用 copy .env.example .env）
+cp .env.example .env        # 填写 DEEPSEEK_API_KEY（Windows cmd 用 copy .env.example .env）
 
 # 3. 运行
 python -m src.cli ask "年假有几天？"                    # 真实模型
 python -m src.cli ask "报销期限是多久？" --backend mock  # 离线 Mock（无需密钥）
 
-# 4. 批量复跑全部示例场景（生成 trace 与答案）
-python -m src.cli batch examples/inputs --outdir examples/runs --answers-dir examples/outputs
+# 4. 批量复跑示例场景（生成 trace 与答案）
+#    注意：会覆盖 examples/runs 与 examples/outputs 中已提交的真实运行证据，
+#    请确认 .env 已配置有效 key；只想离线演示时用 --backend mock 并指定其他输出目录。
+python -m src.cli batch examples/inputs --backend deepseek --outdir examples/runs --answers-dir examples/outputs
 
-# 5. 测试
-pytest -v
+# 5. 测试（52 条离线；真实模型冒烟单独执行）
+pytest -q
+pytest -q -m real_model     # 需要 DEEPSEEK_API_KEY
 ```
 
 **换语料验证**（审核要点：替换文档内容后行为改变）：
@@ -41,8 +48,8 @@ python -m src.cli ask "报销期限是多久？" --corpus-dir examples/corpus_al
 
 1. `docs/03-evaluation.md` —— 8 个场景的预期 vs 实际结果总表（含文件引用）；
 2. `examples/outputs/E2.answer.md` + `examples/runs/E2.trace.json` —— 冲突处理路径（双引用 + 追问，逐步骤决策依据）；
-3. `examples/outputs/E4.answer.md` + `examples/runs/E4.trace.json` —— 检索改进路径（miss → 改写查询 → 命中）；
-4. `pytest -v` —— 49 条离线测试（覆盖全部验收点）；
+3. `examples/outputs/E4.answer.md` + `examples/runs/E4.trace.json` —— 检索改进路径（模型将口语问法改写为制度用语检索、命中 D06；确认性检索后作答）；
+4. `pytest -q` —— 52 条离线测试（覆盖全部验收点；真实模型冒烟用 `pytest -m real_model`）；
 5. `docs/02-solution.md` —— 设计取舍与关键契约（步数口径、校验状态机、Mock 边界）。
 
 ## 目录结构

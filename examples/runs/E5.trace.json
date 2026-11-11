@@ -3,11 +3,15 @@
   "backend": "deepseek",
   "model": "deepseek-chat",
   "corpus_dir": "data/docs",
-  "corpus_hash": "cf6506ce41207c848d75ebcdb891b6e7d15721f504c1f20a8c7f9a1775ae9452",
+  "corpus_hash": "ae1cd75b86a384276d8812c63c6c3ea73d1644e4891d3a6dd83fb6be7495189a",
   "fault_injection": "",
   "max_steps": 12,
-  "timestamp": "2026-11-11T17:23:16",
+  "timestamp": "2026-11-11T17:39:17",
   "python": "3.12.10",
+  "dependencies": {
+    "openai": "2.54.0",
+    "pytest": "9.2.0"
+  },
   "turns": [
     {
       "turn_index": 0,
@@ -53,7 +57,7 @@
           "tool_args": {
             "doc_id": "D05"
           },
-          "assistant_rationale": "检索到 D05《年假管理制度》，我读取原文确认完整规定，并换措辞再检索一次以排除冲突文档。",
+          "assistant_rationale": "检索到 D05，我读取原文确认上下文，并换措辞再检索一次以排除冲突文档。",
           "observation_summary": "读取 D05 成功（3 小节，版本 2024-01-10）",
           "observation_sha256": "1a5970feff87d0ef",
           "next_action": "doc_search",
@@ -68,12 +72,12 @@
           "turn_index": 0,
           "tool_name": "doc_search",
           "tool_args": {
-            "query": "年休假 休假天数 工龄 累计工作年限 折算",
+            "query": "年休假 休假天数 工龄 折算 未休年假",
             "top_k": 10
           },
-          "assistant_rationale": "检索到 D05《年假管理制度》，我读取原文确认完整规定，并换措辞再检索一次以排除冲突文档。",
-          "observation_summary": "命中 0 篇 []；best_score=0.1111",
-          "observation_sha256": "428de0971e9dcc15",
+          "assistant_rationale": "检索到 D05，我读取原文确认上下文，并换措辞再检索一次以排除冲突文档。",
+          "observation_summary": "命中 0 篇 []；best_score=0.1282",
+          "observation_sha256": "94092807f759de2b",
           "next_action": "submit_answer",
           "latency_ms": 0,
           "steps_used": 4,
@@ -87,7 +91,7 @@
           "tool_name": "submit_answer",
           "tool_args": {
             "status": "answered",
-            "answer_text": "根据《年假管理制度》：\n\n1. 全职员工累计工作满一年后，每年享有 5 天带薪年假。\n2. 试用期员工不享有年假，转正后按上述规定执行。\n3. 年假应提前三个工作日通过考勤系统申请，由直属主管审批。\n\n（注：制度中仅规定 5 天，未按工龄分档，也未提及折算规则。）",
+            "answer_text": "根据《年假管理制度》：\n\n1. 全职员工累计工作满一年后，每年享有 5 天带薪年假。\n2. 试用期员工不享有年假，转正后按上述规定执行。\n3. 年假应提前三个工作日通过考勤系统申请，由直属主管审批。\n\n（注：制度中未按工龄分档规定更多天数，也未提及未休年假的折算或补偿规则。）",
             "citations": [
               {
                 "doc_id": "D05",
@@ -106,7 +110,7 @@
               }
             ]
           },
-          "assistant_rationale": "确认性检索无其他相关文档，D05 为唯一规定来源。",
+          "assistant_rationale": "第二次检索无其他命中，确认仅 D05 涉及年假，无冲突文档。",
           "observation_summary": "submit_answer 校验通过，任务完成",
           "observation_sha256": null,
           "next_action": "终止并交付（answered）",
@@ -122,7 +126,7 @@
       ],
       "final": {
         "status": "answered",
-        "answer_text": "根据《年假管理制度》：\n\n1. 全职员工累计工作满一年后，每年享有 5 天带薪年假。\n2. 试用期员工不享有年假，转正后按上述规定执行。\n3. 年假应提前三个工作日通过考勤系统申请，由直属主管审批。\n\n（注：制度中仅规定 5 天，未按工龄分档，也未提及折算规则。）",
+        "answer_text": "根据《年假管理制度》：\n\n1. 全职员工累计工作满一年后，每年享有 5 天带薪年假。\n2. 试用期员工不享有年假，转正后按上述规定执行。\n3. 年假应提前三个工作日通过考勤系统申请，由直属主管审批。\n\n（注：制度中未按工龄分档规定更多天数，也未提及未休年假的折算或补偿规则。）",
         "citations": [
           {
             "doc_id": "D05",
@@ -152,14 +156,13 @@
         {
           "step_index": 6,
           "turn_index": 1,
-          "tool_name": "doc_search",
+          "tool_name": "doc_read",
           "tool_args": {
-            "query": "试用期员工 年假 休假资格",
-            "top_k": 10
+            "doc_id": "D05"
           },
-          "assistant_rationale": "上轮已读取 D05 原文，其中\"试用期员工年假\"小节直接回答了此问题；我再检索一次确认无其他制度另行规定试用期年假。",
-          "observation_summary": "命中 1 篇 ['D05']；best_score=0.2667",
-          "observation_sha256": "98b6b580fc075c70",
+          "assistant_rationale": "上轮已读到 D05 中\"试用期员工年假\"小节，我先重新确认原文，并再检索一次排除其他制度对试用期年假的不同规定。",
+          "observation_summary": "读取 D05 成功（3 小节，版本 2024-01-10）",
+          "observation_sha256": "1a5970feff87d0ef",
           "next_action": "doc_search",
           "latency_ms": 0,
           "steps_used": 6,
@@ -172,13 +175,13 @@
           "turn_index": 1,
           "tool_name": "doc_search",
           "tool_args": {
-            "query": "新员工入职 转正 试用期 假期",
+            "query": "试用期员工 年假 休假资格",
             "top_k": 10
           },
-          "assistant_rationale": "上轮已读取 D05 原文，其中\"试用期员工年假\"小节直接回答了此问题；我再检索一次确认无其他制度另行规定试用期年假。",
-          "observation_summary": "命中 1 篇 ['D07']；best_score=0.4545",
-          "observation_sha256": "8539ee77dc44f6b6",
-          "next_action": "doc_read",
+          "assistant_rationale": "上轮已读到 D05 中\"试用期员工年假\"小节，我先重新确认原文，并再检索一次排除其他制度对试用期年假的不同规定。",
+          "observation_summary": "命中 1 篇 ['D05']；best_score=0.2667",
+          "observation_sha256": "98b6b580fc075c70",
+          "next_action": "submit_answer",
           "latency_ms": 0,
           "steps_used": 7,
           "steps_budget": 12,
@@ -188,56 +191,34 @@
         {
           "step_index": 8,
           "turn_index": 1,
-          "tool_name": "doc_read",
-          "tool_args": {
-            "doc_id": "D07"
-          },
-          "assistant_rationale": "D07 命中仅涉及试用期时长与工资，未涉及年假，无冲突。为稳妥起见读取 D07 全文确认。",
-          "observation_summary": "读取 D07 成功（2 小节，版本 2024-02-01）",
-          "observation_sha256": "6e5f82d55df04bd7",
-          "next_action": "submit_answer",
-          "latency_ms": 0,
-          "steps_used": 8,
-          "steps_budget": 12,
-          "fault_hit": null,
-          "validation": null
-        },
-        {
-          "step_index": 9,
-          "turn_index": 1,
           "tool_name": "submit_answer",
           "tool_args": {
-            "answer_text": "试用期员工不享有年假，转正后按正常规定执行（即累计工作满一年后每年 5 天带薪年假）。\n\n补充：新员工试用期一般为三个月，试用期满前两周提交转正申请，由部门负责人与人力资源部共同评审。",
+            "answer_text": "根据《年假管理制度》：试用期员工不享有年假，转正后按全职员工的规定执行，即累计工作满一年后每年享有 5 天带薪年假。\n\n也就是说，试用期内没有年假额度；转正后按上述标准享受。年假需提前三个工作日通过考勤系统申请，由直属主管审批。",
             "citations": [
               {
                 "doc_id": "D05",
-                "quote": "试用期员工不享有年假，转正后按上述规定执行。",
-                "version_date": "2024-01-10"
+                "version_date": "2024-01-10",
+                "quote": "试用期员工不享有年假，转正后按上述规定执行。"
               },
               {
                 "doc_id": "D05",
-                "quote": "全职员工累计工作满一年后，每年享有 5 天带薪年假。",
-                "version_date": "2024-01-10"
+                "version_date": "2024-01-10",
+                "quote": "全职员工累计工作满一年后，每年享有 5 天带薪年假。"
               },
               {
-                "doc_id": "D07",
-                "quote": "新员工试用期一般为三个月，试用期工资不低于转正工资的百分之八十。",
-                "version_date": "2024-02-01"
-              },
-              {
-                "doc_id": "D07",
-                "quote": "试用期满前两周提交转正申请，由部门负责人与人力资源部共同评审。",
-                "version_date": "2024-02-01"
+                "doc_id": "D05",
+                "version_date": "2024-01-10",
+                "quote": "年假应提前三个工作日通过考勤系统申请，由直属主管审批。"
               }
             ],
             "status": "answered"
           },
-          "assistant_rationale": "D07 未涉及年假，无冲突，可以 D05 作答。",
+          "assistant_rationale": "两次检索均只命中 D05，无冲突文档，可以作答。",
           "observation_summary": "submit_answer 校验通过，任务完成",
           "observation_sha256": null,
           "next_action": "终止并交付（answered）",
           "latency_ms": 0,
-          "steps_used": 9,
+          "steps_used": 8,
           "steps_budget": 12,
           "fault_hit": null,
           "validation": {
@@ -248,27 +229,22 @@
       ],
       "final": {
         "status": "answered",
-        "answer_text": "试用期员工不享有年假，转正后按正常规定执行（即累计工作满一年后每年 5 天带薪年假）。\n\n补充：新员工试用期一般为三个月，试用期满前两周提交转正申请，由部门负责人与人力资源部共同评审。",
+        "answer_text": "根据《年假管理制度》：试用期员工不享有年假，转正后按全职员工的规定执行，即累计工作满一年后每年享有 5 天带薪年假。\n\n也就是说，试用期内没有年假额度；转正后按上述标准享受。年假需提前三个工作日通过考勤系统申请，由直属主管审批。",
         "citations": [
           {
             "doc_id": "D05",
-            "quote": "试用期员工不享有年假，转正后按上述规定执行。",
-            "version_date": "2024-01-10"
+            "version_date": "2024-01-10",
+            "quote": "试用期员工不享有年假，转正后按上述规定执行。"
           },
           {
             "doc_id": "D05",
-            "quote": "全职员工累计工作满一年后，每年享有 5 天带薪年假。",
-            "version_date": "2024-01-10"
+            "version_date": "2024-01-10",
+            "quote": "全职员工累计工作满一年后，每年享有 5 天带薪年假。"
           },
           {
-            "doc_id": "D07",
-            "quote": "新员工试用期一般为三个月，试用期工资不低于转正工资的百分之八十。",
-            "version_date": "2024-02-01"
-          },
-          {
-            "doc_id": "D07",
-            "quote": "试用期满前两周提交转正申请，由部门负责人与人力资源部共同评审。",
-            "version_date": "2024-02-01"
+            "doc_id": "D05",
+            "version_date": "2024-01-10",
+            "quote": "年假应提前三个工作日通过考勤系统申请，由直属主管审批。"
           }
         ],
         "gaps": [],
@@ -277,5 +253,5 @@
       }
     }
   ],
-  "total_steps": 9
+  "total_steps": 8
 }

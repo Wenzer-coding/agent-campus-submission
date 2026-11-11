@@ -98,7 +98,8 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 - `not_in_corpus`：资料外，`gaps` 非空，不编造。
 - `tool_failure`：**同一工具连续 ≥2 次失败**（含注入故障重试后仍失败），如实返回失败事实。
 - `grounding_failed`（循环层）：修复后仍校验失败 → citations 置空、answer_text 改为"生成内容未通过引用校验，已不予交付"、`incomplete_reason` 记录失败规则明细。
-- 无 citations 的状态（not_in_corpus / tool_failure / step_limit / grounding_failed）**跳过引用校验**。
+- **无 citations 的状态（not_in_corpus / tool_failure / step_limit / grounding_failed）的 citations 必须为空**——携带引用即判校验失败，防止伪造引用借道绕过保真校验。
+- `needs_user_confirmation` 须至少携带两条引用（冲突双方），由 schema 校验强制。
 
 ## 6. 引用保真校验（src/grounding.py）——代码级防线
 
@@ -111,7 +112,7 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 1. `doc_id` 必须出现在**携带内容的成功观察**中（search 命中片段或 read 成功）；错误观察（DOC_NOT_FOUND / 超时）只作负证据。
 2. `quote` 必须逐字出现在该文档被观察到的某个 span 中。匹配 = `norm(quote)` 是 `norm(span)` 的子串；`norm` = NFKC + casefold + Unicode 空白折叠为单空格 + 去零宽字符，**不删标点**（防跨句拼接）。
 3. `version_date` 必须与观察到的版本日期一致。
-4. 无 citations 的交付跳过校验（见 §5）。
+4. 无 citations 的交付跳过引用校验，且 schema 强制这些状态的引用为空（见 §5），杜绝伪造引用借道。
 
 失败 → 错误明细（规则号、双方归一化文本、doc_id）写回 → 修复一轮（§4.2b）；再失败 → `grounding_failed`。
 
@@ -142,9 +143,9 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 
 - 索引文本 = 标题 + 全部 `heading + text`；query 与索引文本均做 NFKC + 去空白后取字符 bigram 集合。
 - `score = (body_coverage + 2 × title_coverage) / 3`，coverage = |query bigrams ∩ 字段 bigrams| / |query bigrams|，值域 [0,1]。
-- **阈值 T = 0.2**（`data/rules.md` 可配置）：`score < T` 不返回；响应始终附 `best_score` 供模型判断。
+- **阈值 T = 0.2**（`data/docs/search_config.json` 可配置）：`score < T` 不返回；响应始终附 `best_score` 供模型判断。
 - query 归一化后 bigram 集为空（单字/纯空白）→ `{results: [], best_score: 0, empty_reason: "query too short"}`。
-- `top_k` 默认 5、上限 10，非法值纠正为默认；排序键 `(-score, doc_id)` 保证全序确定；IDF 在语料加载时预计算（当前版本公式未用 IDF，接口保留）。
+- `top_k` 默认 5、上限 10，非法值（0/负数/非整数）纠正为默认；排序键 `(-score, doc_id)` 保证全序确定。
 
 ### 8.2 故障注入
 
@@ -171,8 +172,8 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 
 | 文档 | 主题 | 设计意图 |
 |---|---|---|
-| D01 差旅费用报销管理办法 v2024-06-01 | 报销期限 30 天 | 参考实例冲突方一（标题平级、无适用范围声明） |
-| D02 费用报销操作指引 v2024-08-15 | 报销期限 15 天（无适用范围/优先级/替代关系） | 参考实例冲突方二 |
+| D01 差旅费用报销管理办法 v2024-06-01 | 正文含报销期限 30 天（未声明适用范围/优先级） | 参考实例冲突方一 |
+| D02 费用报销操作指引 v2024-08-15 | 正文含报销期限 15 天（未声明适用范围/优先级/替代关系） | 参考实例冲突方二 |
 | D03 考勤与作息管理规定 v2024-01-15 | 作息 9:00-18:00、打卡 | 干扰项 |
 | D04 发票开具与领取说明 v2024-05-10 | 发票抬头税号流程 | 干扰项（不含"报销"bigram） |
 | D05 年假管理制度 v2024-01-10 | 满一年 5 天年假；试用期员工不享有 | 明确答案 + 上下文追问 + E1 适用条件 |
@@ -184,13 +185,13 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 
 ### 9.3 场景可触发性（bigram 覆盖率预验证，阈值 T=0.2）
 
-| 场景 query | 首查结果 | 依据 |
+| 场景 query | 首查结果（实测） | 依据 |
 |---|---|---|
-| "报销期限是多久" | D01=0.278、D02=0.278（双命中）、D06=0.056 被滤除 | 两文档均含"报销期限"字面 |
-| "年假有几天" | 仅 D05=0.25；D07 无"年假"bigram 被滤除 | — |
-| "出差住酒店一晚最多能报多少钱" | **全部 < 0.2（miss）**：D01/D06 仅命中"出差"≈0.077 | 口语措辞与制度措辞词面差异是场景引擎 |
-| 改写后"差旅住宿标准 每晚限额 报销" | D06=0.467 > D01≈0.2 | 标题权重使目标文档显著领先 |
-| "试用期 年假"（E5 T2） | D05=0.417；D07=0.167 被滤除 | D07 标题不含"试用期" |
+| "报销期限是多久" | D01=0.2778、D02=0.2778（双命中） | 两文档均含"报销期限"字面 |
+| "年假有几天" | 仅 D05=0.25 | D07 无"年假"bigram 被滤除 |
+| "出差住酒店一晚最多能报多少钱" | **无命中（best_score=0.0513 < 0.2）** | 口语措辞与制度措辞词面差异是场景引擎 |
+| 改写后"差旅住宿标准 每晚限额 报销" | D06=0.4545 > D01=0.2121 | 标题权重使目标文档显著领先 |
+| "试用期 年假"（E5 T2） | D05=0.4167 单独命中 | D07 低于阈值被滤除 |
 
 `examples/corpus_alt/`：D01 的 30 天改为 45 天、删除 D02 的替换语料，用于演示与测试"替换文档内容 → 答案与动作随之改变"（`--corpus-dir` 切换）。
 
@@ -198,7 +199,7 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 
 - **DeepSeek 后端**：OpenAI 兼容 `/chat/completions`，`tools=[...]` function calling；`OpenAI(timeout=60, max_retries=2)` 用 SDK 自带重试（不叠加自写外层重试）；环境变量 `DEEPSEEK_API_KEY/DEEPSEEK_BASE_URL/DEEPSEEK_MODEL`，`.env` 加载，`.env.example` 提供模板，密钥不入库。
 - **无 key 且未指定 `--backend`**：告警并自动回落 mock，保证零配置可运行。
-- **Mock 后端**：与真实后端同一循环、工具层、校验器；决策函数为**观察特征向量 + 优先级策略**的纯函数——特征取自 Ledger/消息状态（`last_search_hit_count、best_score、是否已 read、同槽位 ≥2 个不同值且无裁决信息、pending 校验错误、故障未重试、steps_used、last_tool`），按优先级出动作；**不得读取场景 ID、不得对问句做字面等值匹配**；查询改写用 `data/rewrite_map.json`（数据层表驱动）+ 通用降噪改写兜底；Mock 同样产出 `assistant_rationale`，trace schema 与真实后端一致。
+- **Mock 后端**：与真实后端同一循环、工具层、校验器；决策函数为**观察特征向量 + 优先级策略**的纯函数——特征取自最近工具结果/消息状态（`last_search_results、best_score、是否已 read、同槽位数值冲突、pending 校验错误、故障未重试、last_action、历史问题`），按优先级出动作；**不读取场景 ID、不对问句做等值分支**；查询改写用 `data/rewrite_map.json` **精确匹配**（未入表的问法不做通用兜底，Mock 只覆盖入表变体，不声称通用改写能力）；Mock 同样产出 `assistant_rationale`，trace schema 与真实后端一致。
 - **边界声明**（README、04-ai-usage 同步）：Mock 只验证流程、schema、校验器与边界分支的可运行性，**不证明真实模型决策效果**；ReAct 决策效果证据以 DeepSeek 真实运行 trace 为准。
 
 ## 11. 多轮对话
@@ -231,12 +232,13 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 | E1 正常问答 | "年假有几天？" | answered，引用 D05；answer_text 含适用条件（"累计工作满一年"）；trace 含 ≥2 次检索（确认性检索纪律） | 明确答案 | 必须验收① |
 | E2 文档冲突 | "报销期限是多久？" | needs_user_confirmation，列 D01(30天)/D02(15天) 双引用 + 追问；不选边 | 文档冲突 | 必须验收②、参考实例 |
 | E3 资料外 | "公司有健身房吗？" | not_in_corpus，gaps 指明缺口，不编造 | 资料外问题 | 必须验收③ |
-| E4 改写相似问题 | "出差住酒店一晚最多能报多少钱" | 首查 miss（best_score < T）→ 模型改写查询 → 命中 D06 → answered；实际路径如实记录 | 改写后的相似问题（检索改进） | 必须验收④、审核要点"检索改进" |
+| E4 改写相似问题 | "出差住酒店一晚最多能报多少钱" | 口语问法经模型改写为制度用语检索并命中 D06；两次确认性检索 miss 后判定无其他来源 → answered（真实运行路径，见 03；离线 Mock 测试另覆盖"首查 miss→改写→命中"机制） | 改写后的相似问题（检索改进） | 必须验收④、审核要点"检索改进" |
 | E5 上下文追问 | turns: ["年假有几天？", "那试用期员工呢？"] | T2 结合历史检索"试用期 年假"→ 引用 D05 试用期条款 | 上下文追问 | 必须验收⑤ |
 | E6 工具失败 | E1 问句 + `--fault doc_read:1:timeout` | 观察到 TOOL_TIMEOUT → 重试或改用检索片段兜底 → 如实交付 | 工具失败 | 必须验收⑥ |
 | E7 步数上限 | E2 问句 + `--max-steps 1` | step_limit 明确未完成 + 已观察摘要 | 步数上限 | 全局规则 |
+| E8 换语料 | E2 问句 + `--corpus-dir examples/corpus_alt`（D01→45 天、删除 D02） | answered 引用 D01 原文 45 天，冲突消失 | 替换文档内容验证 | 审核要点 |
 
-**两条执行路径证据**：E4（miss→改写→命中，检索改进路径）与 E2（双命中→冲突→请求确认，冲突路径）形成最鲜明的"模型根据不同工具结果调整动作"对照；E1/E3/E5/E6 提供额外路径。03-evaluation.md 逐文件引用。
+**两条执行路径证据**：E2（双命中→读取双方原文→确认性检索→请求确认）与 E6（超时→重试成功）形成最鲜明的"模型根据不同工具结果调整动作"对照；E4（查询精化 + 确认性检索 miss 后调整判定）、E3（两次 miss→清单→拒答）、E1/E5/E7/E8 提供额外路径。03-evaluation.md 逐文件引用。
 
 ## 14. 交付物清单与规则映射
 
@@ -257,7 +259,7 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 | 运行命令可复制 | README §运行 |
 | Mock 边界声明 | README、docs/02 §10、docs/04 |
 | 步数上限 + 未完成状态 | §4 + E7 trace |
-| 至少 3 组输入覆盖全部验收点 | E1-E7（7 组） |
+| 至少 3 组输入覆盖全部验收点 | E1–E8（8 组） |
 
 ## 15. 风险与缓解
 
@@ -265,7 +267,7 @@ system prompt 要求模型在每次工具调用前用一两句话说明选择依
 |---|---|
 | 模型捏造引用/数值 | submit_answer 结构化 + Ledger 保真校验 + 修复一轮 + grounding_failed 终态 |
 | 模型冲突场景擅自选边 | 纪律入 system prompt + 确认性检索纪律 + E2 断言 + 测试固化 |
-| E4 首查意外命中导致改写路径不出现 | 已用 bigram 预验证保证 miss；验收允许"miss→改写→命中"与"弱命中→主动精化"两种合法路径，实际路径如实记录 |
+| E4 检索路径随模型波动 | 模型自主选择查询；实测于首次检索前完成口语→制度用语改写并命中，确认性检索 miss 后判定无其他来源。离线测试覆盖"首查 miss→改写→命中"机制，实际路径如实记录于 03 |
 | 多轮历史撑爆上下文 | 抽取式压缩 ≤1200 字符 |
 | DeepSeek 波动 | SDK 重试 + mock 兜底 + 失败如实记录 |
 | 评审替换语料 | 全数据驱动 + `--corpus-dir` + corpus_alt 演示 + 参数化测试 |
@@ -279,7 +281,9 @@ cp .env.example .env          # 填 DEEPSEEK_API_KEY（无 key 时 mock 自动�
 
 python -m src.cli ask "报销期限是多久？"
 python -m src.cli ask "年假有几天？" --backend mock
-python -m src.cli batch examples/inputs --outdir examples/runs --answers-dir examples/outputs
+python -m src.cli batch examples/inputs --backend deepseek
+# 注意：上面这条命令会覆盖 examples/runs 与 examples/outputs 中已提交的真实运行证据，
+# 复跑前请确认 .env 已配置有效 key；离线演示请改用 --backend mock 并指定其他输出目录。
 python -m src.cli ask "报销期限是多久？" --corpus-dir examples/corpus_alt
-pytest -v
+pytest -q                      # 52 条离线测试；真实模型冒烟：pytest -m real_model
 ```

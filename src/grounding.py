@@ -72,6 +72,8 @@ def validate_payload(payload: dict) -> list[str]:
     if not isinstance(citations, list):
         errs.append("citations 必须是数组")
         citations = []
+    if status in NO_CITATION_STATUSES and citations:
+        errs.append(f"status={status} 时 citations 必须为空（该状态不引用任何文档）")
     for i, c in enumerate(citations):
         if not isinstance(c, dict):
             errs.append(f"citations[{i}] 必须是对象")
@@ -82,6 +84,8 @@ def validate_payload(payload: dict) -> list[str]:
                 errs.append(f"citations[{i}].{key} 缺失或为空")
     if status in ("answered", "needs_user_confirmation") and not citations:
         errs.append(f"status={status} 时 citations 不能为空")
+    if status == "needs_user_confirmation" and len(citations) < 2:
+        errs.append("status=needs_user_confirmation 时须至少引用冲突双方两条（citations ≥ 2）")
     if status == "not_in_corpus":
         gaps = payload.get("gaps")
         if not isinstance(gaps, list) or not gaps:

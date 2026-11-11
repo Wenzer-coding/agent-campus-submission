@@ -46,14 +46,25 @@ def test_out_of_corpus_query_empty(corpus):
     assert res["results"] == []
 
 
-def test_snippet_is_verbatim_substring(corpus):
+def test_snippet_is_relevant_and_verbatim(corpus):
+    res = corpus.search("年假有几天")
+    assert "5 天" in res["results"][0]["snippet"], "命中片段应是与问题相关的小节原句"
     res = corpus.search("报销期限是多久")
+    by_id = {r["doc_id"]: r for r in res["results"]}
+    assert "30" in by_id["D01"]["snippet"]
+    assert "15" in by_id["D02"]["snippet"]
     for r in res["results"]:
         doc = corpus.get(r["doc_id"])
         haystack = doc.title + "\n" + "\n".join(
             f"{s['heading']}\n{s['text']}" for s in doc.sections
         )
         assert r["snippet"] in haystack, f"snippet 必须是原文逐字片段: {r['snippet']!r}"
+
+
+def test_top_k_invalid_values_fall_back(corpus):
+    for bad in (0, -5, "abc", None):
+        res = corpus.search("年假", top_k=bad)
+        assert len(res["results"]) <= corpus.config["top_k_default"]
 
 
 def test_top_k_clamped_and_empty_query(corpus):

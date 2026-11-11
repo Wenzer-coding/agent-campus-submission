@@ -103,12 +103,13 @@ def _write_json(path: Path, data: dict) -> None:
 def cmd_ask(args) -> int:
     corpus = Corpus(args.corpus_dir)
     backend = build_backend(args.backend, corpus)
+    fault = args.fault or os.getenv("FAULT_INJECTION", "")
     res = run_agent(
         args.question,
         corpus=corpus,
         backend=backend,
         max_steps=args.max_steps,
-        fault_spec=args.fault,
+        fault_spec=fault,
         scenario_id="ask",
     )
     payload = res["payload"]
@@ -146,12 +147,13 @@ def cmd_batch(args) -> int:
             return 1
         corpus = Corpus(spec.get("corpus_dir") or args.corpus_dir)
         backend = build_backend(spec.get("backend") or args.backend, corpus)
+        fault = spec.get("fault_injection") or args.fault or os.getenv("FAULT_INJECTION", "")
         res = run_agent(
             turns,
             corpus=corpus,
             backend=backend,
             max_steps=int(spec.get("max_steps") or args.max_steps),
-            fault_spec=spec.get("fault_injection") or args.fault,
+            fault_spec=fault,
             scenario_id=sid,
         )
         _write_json(outdir / f"{sid}.trace.json", res["trace"])
@@ -187,9 +189,19 @@ def main(argv=None) -> int:
         p.add_argument("--fault", default="", help='故障注入，如 "doc_read:1:timeout"')
 
     args = parser.parse_args(argv)
-    if args.cmd == "ask":
-        return cmd_ask(args)
-    return cmd_batch(args)
+    try:
+        if args.cmd == "ask":
+            return cmd_ask(args)
+        return cmd_batch(args)
+    except Exception as exc:  # noqa: BLE001 - 网络类异常给出可操作提示
+        if exc.__class__.__name__ in ("APIConnectionError", "APITimeoutError", "APIStatusError"):
+            print(
+                "[error] 无法访问 DeepSeek API（网络异常或服务不可用）。"
+                "离线评审请显式使用 --backend mock。",
+                file=sys.stderr,
+            )
+            return 2
+        raise
 
 
 if __name__ == "__main__":

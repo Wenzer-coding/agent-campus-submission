@@ -14,7 +14,7 @@ import re
 import uuid
 from pathlib import Path
 
-from .corpus import bigrams, split_sentences
+from .corpus import bigrams, normalize, split_sentences
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
@@ -108,6 +108,8 @@ class MockBackend(Backend):
 
         action = self._decide()
         self.last_action = action
+        if action["name"] == "submit_answer":
+            self.last_submit_payload = action.get("args", {})
         tool_id = f"mock_{uuid.uuid4().hex[:8]}"
         return {
             "content": action.get("rationale", ""),
@@ -129,6 +131,8 @@ class MockBackend(Backend):
                 self.submit_error = payload
             return
         self.last_error = None
+        # 成功即打断"连续失败"计数（只对连续失败才降级 tool_failure）
+        self.retried = {k for k in self.retried if not str(k).startswith(f"{tool}:")}
         if tool == "doc_search":
             self.search_payloads.append(payload)
         elif tool == "doc_read":
@@ -289,7 +293,9 @@ class MockBackend(Backend):
             return None
         items = list(sents.items())[:2]
         (d1, (s1, _h1, r1)), (d2, (s2, _h2, r2)) = items[0], items[1]
-        if set(re.findall(r"\d+", s1)) == set(re.findall(r"\d+", s2)):
+        nums1 = tuple(re.findall(r"\d+(?:\.\d+)?", s1))
+        nums2 = tuple(re.findall(r"\d+(?:\.\d+)?", s2))
+        if nums1 == nums2:
             return None
         return {
             "name": "submit_answer",
@@ -343,8 +349,10 @@ class MockBackend(Backend):
             "status": "not_in_corpus",
             "answer_text": "无法完成本次交付。",
             "citations": [],
+            "gaps": ["无法完成本次交付"],
         }
         fixed = dict(payload)
+        fixed["gaps"] = fixed.get("gaps") or []
         # 用已读原文过滤引用（Mock 引用均来自原文，此路径通常不触发）
         kept = []
         for c in payload.get("citations") or []:
@@ -354,7 +362,7 @@ class MockBackend(Backend):
             hay = "\n".join(
                 f"{sec.get('heading', '')}\n{sec.get('text', '')}" for sec in read.get("sections", [])
             )
-            if c.get("quote", "") and c["quote"] in hay:
+            if c.get("quote", "") and normalize(c["quote"]) in normalize(hay):
                 kept.append(c)
         fixed["citations"] = kept
         if fixed.get("status") in ("answered", "needs_user_confirmation") and not kept:

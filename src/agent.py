@@ -47,14 +47,19 @@ def _summarize(result: dict) -> str:
     return json.dumps(result, ensure_ascii=False)[:200]
 
 
-def _step_limit_payload(steps_used: int, max_steps: int, registry: ToolRegistry, reason: str = "") -> dict:
+def _step_limit_payload(
+    steps_used: int, max_steps: int, registry: ToolRegistry, reason: str = "", recent_obs: list[str] | None = None
+) -> dict:
     counts = "、".join(f"{k}×{v}" for k, v in sorted(registry.dispatch_counts.items())) or "无"
     text = f"未能在步数上限（{max_steps} 步）内完成任务。"
     if reason:
         text += reason
+    summary = ""
+    if recent_obs:
+        summary = " 已完成动作摘要：" + "；".join(recent_obs[-2:])[:240]
     return {
         "status": "step_limit",
-        "answer_text": text,
+        "answer_text": text + summary,
         "citations": [],
         "gaps": [],
         "followup_question": None,
@@ -115,6 +120,21 @@ def run_agent(
     text_nudges = 0
     history = ""
     final_payload: dict | None = None
+    recent_obs: list[str] = []
+
+    deps: dict[str, str] = {}
+    try:
+        import openai as _openai
+
+        deps["openai"] = getattr(_openai, "__version__", "?")
+    except ImportError:  # pragma: no cover
+        pass
+    try:
+        import pytest as _pytest
+
+        deps["pytest"] = getattr(_pytest, "__version__", "?")
+    except ImportError:  # pragma: no cover
+        pass
 
     trace = {
         "scenario_id": scenario_id,
@@ -126,10 +146,12 @@ def run_agent(
         "max_steps": max_steps,
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "python": platform.python_version(),
+        "dependencies": deps,
         "turns": [],
     }
 
     for turn_index, question in enumerate(turns):
+        text_nudges = 0  # 只统计"连续"纯文本回复
         user_content = question if not history else f"[对话历史摘要]\n{history}\n[当前问题]\n{question}"
         messages.append({"role": "user", "content": user_content})
         turn_trace = {"turn_index": turn_index, "question": question, "steps": [], "final": None}
@@ -138,7 +160,7 @@ def run_agent(
 
         while turn_final is None:
             if steps_used >= max_steps:
-                turn_final = _step_limit_payload(steps_used, max_steps, registry)
+                turn_final = _step_limit_payload(steps_used, max_steps, registry, recent_obs=recent_obs)
                 break
             resp = backend.chat(messages, TOOLS, turn_index)
             content = (resp.get("content") or "").strip()
@@ -169,9 +191,15 @@ def run_agent(
                 )
                 if text_nudges >= 2:
                     turn_final = _step_limit_payload(
-                        steps_used, max_steps, registry, reason="模型连续两次未按要求调用工具。"
+                        steps_used,
+                        max_steps,
+                        registry,
+                        reason="模型连续两次未按要求调用工具。",
+                        recent_obs=recent_obs,
                     )
                 continue
+
+            text_nudges = 0  # 有工具调用即打断"连续纯文本"计数
 
             messages.append(
                 {
@@ -189,6 +217,7 @@ def run_agent(
             )
 
             budget_exhausted_in_batch = False
+            responded_ids: set[str] = set()
             for call in calls:
                 if turn_final is not None:
                     break
@@ -204,6 +233,7 @@ def run_agent(
                             ),
                         }
                     )
+                    responded_ids.add(call["id"])
                     budget_exhausted_in_batch = True
                     continue
                 steps_used += 1
@@ -244,6 +274,8 @@ def run_agent(
                                 "content": json.dumps({"tool": "submit_answer", "accepted": True}, ensure_ascii=False),
                             }
                         )
+                        responded_ids.add(call["id"])
+                        recent_obs.append("submit_answer 校验通过")
                         step_entry["observation_summary"] = "submit_answer 校验通过，任务完成"
                         step_entry["validation"] = {"passed": True, "failed_checks": []}
                         turn_trace["steps"].append(step_entry)
@@ -253,6 +285,7 @@ def run_agent(
                     step_entry["observation_summary"] = "交付校验失败：" + "；".join(errors[:3])
                     step_entry["validation"] = {"passed": False, "failed_checks": errors}
                     turn_trace["steps"].append(step_entry)
+                    recent_obs.append("submit_answer 校验失败")
                     if not repair_used:
                         repair_used = True
                         messages.append(
@@ -265,6 +298,7 @@ def run_agent(
                                 ),
                             }
                         )
+                        responded_ids.add(call["id"])
                         continue
                     turn_final = _grounding_failed_payload(errors)
                     messages.append(
@@ -277,6 +311,7 @@ def run_agent(
                             ),
                         }
                     )
+                    responded_ids.add(call["id"])
                     break
 
                 # 普通工具
@@ -297,12 +332,27 @@ def run_agent(
                 step_entry["observation_summary"] = _summarize(result)[:300]
                 step_entry["observation_sha256"] = _json_sha(payload_json)
                 turn_trace["steps"].append(step_entry)
+                recent_obs.append(f"{call['name']} → {step_entry['observation_summary'][:80]}")
                 messages.append({"role": "tool", "tool_call_id": call["id"], "content": payload_json})
+                responded_ids.add(call["id"])
 
             if turn_final is not None:
+                # 批次提前终止时，为同批剩余调用补配对响应（消息序列不变量）
+                for call in calls:
+                    if call["id"] not in responded_ids:
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": call["id"],
+                                "content": json.dumps(
+                                    {"tool": call["name"], "error": "NOT_EXECUTED", "message": "同批已产生交付/终止，该调用未执行"},
+                                    ensure_ascii=False,
+                                ),
+                            }
+                        )
                 break
             if budget_exhausted_in_batch:
-                turn_final = _step_limit_payload(steps_used, max_steps, registry)
+                turn_final = _step_limit_payload(steps_used, max_steps, registry, recent_obs=recent_obs)
                 break
             # 本轮所有工具调用执行完毕，继续循环让后端决定下一步
 

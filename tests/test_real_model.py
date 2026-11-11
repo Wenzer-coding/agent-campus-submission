@@ -33,5 +33,8 @@ def test_deepseek_conflict(corpus):
     from src.llm import DeepSeekBackend
 
     res = run_agent("报销期限是多久？", corpus, DeepSeekBackend(), max_steps=10)
-    assert res["payload"]["status"] in ("needs_user_confirmation", "answered")
-    # 若判为冲突，必须双引用；若答为 answered，也必须通过引用校验（validate_submission 已在循环内执行）
+    p = res["payload"]
+    # 验收点②：未裁决冲突必须请求确认、双引用，不得擅自选边
+    assert p["status"] == "needs_user_confirmation"
+    assert sorted(c["doc_id"] for c in p["citations"]) == ["D01", "D02"]
+    assert p["followup_question"]

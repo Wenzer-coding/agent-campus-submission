@@ -87,6 +87,8 @@ class Corpus:
         self.docs: dict[str, Doc] = {}
         for p in sorted(self.docs_dir.glob("D*.json")):
             data = json.loads(p.read_text(encoding="utf-8-sig"))
+            if not data.get("sections"):
+                raise ValueError(f"文档 {p.name} 没有 sections")
             doc = Doc(
                 doc_id=data["doc_id"],
                 title=data["title"],
@@ -119,8 +121,13 @@ class Corpus:
     def search(self, query: str, top_k: int | None = None) -> dict:
         """字符 bigram 覆盖率评分检索。score = (body_cov + tw * title_cov) / (1 + tw)。"""
         cfg = self.config
-        k = cfg["top_k_default"] if top_k is None else int(top_k)
-        k = max(1, min(k, int(cfg["top_k_max"])))
+        try:
+            k = int(cfg["top_k_default"]) if top_k is None else int(top_k)
+        except (TypeError, ValueError):
+            k = int(cfg["top_k_default"])
+        if k <= 0:
+            k = int(cfg["top_k_default"])
+        k = min(k, int(cfg["top_k_max"]))
         q = bigrams(query)
         if not q:
             return {"results": [], "best_score": 0.0, "empty_reason": "query too short"}
@@ -150,24 +157,33 @@ class Corpus:
         return {"results": results, "best_score": round(best_score, 4)}
 
     def _best_snippet(self, doc: Doc, q: set[str]) -> tuple[str, str]:
-        """返回原文整句（或小节标题）作为命中片段，绝不截断、不加省略号。"""
-        best: tuple[int, int, str, str] | None = None
-        order = 0
-        for sec in doc.sections:
+        """返回原文整句（或小节标题）作为命中片段，绝不截断、不加省略号。
+
+        选句评分：句子重叠 + 所属小节标题重叠（小节相关才更可能是命中句），
+        再偏好含数字的句子、再偏好靠前小节，保证确定性。
+        """
+        best_key: tuple | None = None
+        best: tuple[str, str] | None = None
+        for order, sec in enumerate(doc.sections):
+            heading = sec["heading"]
+            head_ov = len(q & bigrams(heading))
             for sentence in split_sentences(sec["text"]):
-                overlap = len(q & bigrams(sentence))
-                key = (overlap, -len(sentence), order, sentence, sec["heading"])
-                if best is None or (key[0], key[1], -key[2]) > (best[0], best[1], -best[2]):
-                    best = (overlap, -len(sentence), order, sentence, sec["heading"])
-                order += 1
-        if best is not None and best[0] > 0:
-            return best[3], best[4]
+                s_ov = len(q & bigrams(sentence))
+                if s_ov == 0 and head_ov == 0:
+                    continue
+                key = (s_ov + head_ov, s_ov, 1 if re.search(r"\d", sentence) else 0, -order)
+                if best_key is None or key > best_key:
+                    best_key = key
+                    best = (sentence, heading)
+        if best is not None:
+            return best
         # 正文无命中时退化到标题候选
         for sec in doc.sections:
-            overlap = len(q & bigrams(sec["heading"]))
-            if best is None or (overlap, -len(sec["heading"])) > (best[0], best[1]):
-                best = (overlap, -len(sec["heading"]), 0, sec["heading"], sec["heading"])
+            key = (len(q & bigrams(sec["heading"])), -doc.sections.index(sec))
+            if best_key is None or key > best_key:
+                best_key = key
+                best = (sec["heading"], sec["heading"])
         if best is None:
             sec = doc.sections[0]
             return sec["text"], sec["heading"]
-        return best[3], best[4]
+        return best

@@ -31,9 +31,10 @@
 
 ## 4. 验证结果（AI 产出不是"看起来对"，而是被测过）
 
-- `pytest -q`：**49 passed**（含 2 条真实模型冒烟；全部离线测试确定性可复现）；
+- `pytest -q`：**52 passed, 2 deselected**（离线确定性，默认不跑真实模型用例）；`pytest -q -m real_model`：**2 passed**（DeepSeek 冒烟）。记录见 `examples/test-results.txt`；
 - 8 个场景全部用真实 DeepSeek 运行并落盘 trace/答案（`examples/`），结果与预期逐一对照见 `docs/03-evaluation.md`；
-- 开发过程中真实暴露并修复的缺陷示例：批量运行 E5 时第二轮请求被 API 以 400 拒绝（成功交付 submit_answer 后未补 tool 响应，违反 `tool_call_id` 配对不变量）——修复后全量复跑通过。此类问题只会在真实运行中暴露，说明验证链路有效。
+- 开发过程中真实暴露并修复的缺陷示例：批量运行 E5 时第二轮请求被 API 以 400 拒绝（成功交付 submit_answer 后未补 tool 响应，违反 `tool_call_id` 配对不变量）——修复后新增回归测试并全量复跑通过；
+- 交付前的多代理终审又发现并修复：无引用状态可携带伪造引用绕过校验、同批多 tool_calls 提前终止未补配对、命中片段选句与问题无关、批量复跑可能用 Mock 覆盖真实 trace 的文档误导、测试计数口径不一致、E4 实际路径与文档描述不符等问题（修复明细见 git 提交记录与 05-retrospective §2.5）。
 
 ## 5. 声明
 

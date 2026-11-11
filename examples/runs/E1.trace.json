@@ -3,11 +3,15 @@
   "backend": "deepseek",
   "model": "deepseek-chat",
   "corpus_dir": "data/docs",
-  "corpus_hash": "cf6506ce41207c848d75ebcdb891b6e7d15721f504c1f20a8c7f9a1775ae9452",
+  "corpus_hash": "ae1cd75b86a384276d8812c63c6c3ea73d1644e4891d3a6dd83fb6be7495189a",
   "fault_injection": "",
   "max_steps": 8,
-  "timestamp": "2026-11-11T17:22:53",
+  "timestamp": "2026-11-11T17:38:54",
   "python": "3.12.10",
+  "dependencies": {
+    "openai": "2.54.0",
+    "pytest": "9.2.0"
+  },
   "turns": [
     {
       "turn_index": 0,
@@ -53,7 +57,7 @@
           "tool_args": {
             "doc_id": "D05"
           },
-          "assistant_rationale": "检索到 D05《年假管理制度》，我读取原文确认上下文，并换措辞再检索一次以排除冲突文档。",
+          "assistant_rationale": "检索到 D05《年假管理制度》，我读取原文确认完整规定，并换措辞再检索一次以排除冲突文档。",
           "observation_summary": "读取 D05 成功（3 小节，版本 2024-01-10）",
           "observation_sha256": "1a5970feff87d0ef",
           "next_action": "doc_search",
@@ -68,12 +72,12 @@
           "turn_index": 0,
           "tool_name": "doc_search",
           "tool_args": {
-            "query": "年休假 休假天数 累计工作年限 司龄",
+            "query": "年休假 休假天数 累计工作年限 折算",
             "top_k": 10
           },
-          "assistant_rationale": "检索到 D05《年假管理制度》，我读取原文确认上下文，并换措辞再检索一次以排除冲突文档。",
+          "assistant_rationale": "检索到 D05《年假管理制度》，我读取原文确认完整规定，并换措辞再检索一次以排除冲突文档。",
           "observation_summary": "命中 0 篇 []；best_score=0.1282",
-          "observation_sha256": "bff4fc3103e6fc7f",
+          "observation_sha256": "1bfb8229ab7e4d15",
           "next_action": "submit_answer",
           "latency_ms": 0,
           "steps_used": 4,
@@ -87,7 +91,7 @@
           "tool_name": "submit_answer",
           "tool_args": {
             "status": "answered",
-            "answer_text": "根据《年假管理制度》：全职员工累计工作满一年后，每年享有 5 天带薪年假。试用期员工不享有年假，转正后按上述规定执行。年假应提前三个工作日通过考勤系统申请，由直属主管审批。",
+            "answer_text": "根据《年假管理制度》：\n\n1. 全职员工累计工作满一年后，每年享有 5 天带薪年假。\n2. 试用期员工不享有年假，转正后按上述规定执行。\n3. 申请方式：年假应提前三个工作日通过考勤系统申请，由直属主管审批。\n\n如需了解其他情形（如工龄更长是否增加天数），制度中未作规定，建议向人力资源部门确认。",
             "citations": [
               {
                 "doc_id": "D05",
@@ -106,7 +110,7 @@
               }
             ]
           },
-          "assistant_rationale": "已确认制度原文，且换措辞检索未发现其他年假规定文档。",
+          "assistant_rationale": "已确认制度原文，且换措辞检索未发现其他冲突文档。",
           "observation_summary": "submit_answer 校验通过，任务完成",
           "observation_sha256": null,
           "next_action": "终止并交付（answered）",
@@ -122,7 +126,7 @@
       ],
       "final": {
         "status": "answered",
-        "answer_text": "根据《年假管理制度》：全职员工累计工作满一年后，每年享有 5 天带薪年假。试用期员工不享有年假，转正后按上述规定执行。年假应提前三个工作日通过考勤系统申请，由直属主管审批。",
+        "answer_text": "根据《年假管理制度》：\n\n1. 全职员工累计工作满一年后，每年享有 5 天带薪年假。\n2. 试用期员工不享有年假，转正后按上述规定执行。\n3. 申请方式：年假应提前三个工作日通过考勤系统申请，由直属主管审批。\n\n如需了解其他情形（如工龄更长是否增加天数），制度中未作规定，建议向人力资源部门确认。",
         "citations": [
           {
             "doc_id": "D05",

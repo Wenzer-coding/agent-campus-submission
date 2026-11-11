@@ -3,11 +3,15 @@
   "backend": "deepseek",
   "model": "deepseek-chat",
   "corpus_dir": "data/docs",
-  "corpus_hash": "cf6506ce41207c848d75ebcdb891b6e7d15721f504c1f20a8c7f9a1775ae9452",
+  "corpus_hash": "ae1cd75b86a384276d8812c63c6c3ea73d1644e4891d3a6dd83fb6be7495189a",
   "fault_injection": "",
   "max_steps": 1,
-  "timestamp": "2026-11-11T17:23:30",
+  "timestamp": "2026-11-11T17:39:29",
   "python": "3.12.10",
+  "dependencies": {
+    "openai": "2.54.0",
+    "pytest": "9.2.0"
+  },
   "turns": [
     {
       "turn_index": 0,
@@ -34,7 +38,7 @@
       ],
       "final": {
         "status": "step_limit",
-        "answer_text": "未能在步数上限（1 步）内完成任务。",
+        "answer_text": "未能在步数上限（1 步）内完成任务。 已完成动作摘要：doc_search → 命中 2 篇 ['D02', 'D01']；best_score=0.4333",
         "citations": [],
         "gaps": [],
         "followup_question": null,

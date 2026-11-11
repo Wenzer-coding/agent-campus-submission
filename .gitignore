@@ -1,5 +1,7 @@
 # 环境与密钥 — 绝不入库
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
