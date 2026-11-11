@@ -1,0 +1,7 @@
+# 换行符与文本文件约定（Windows 输出不受 CRLF 污染）
+* text=auto eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.txt text eol=lf
+*.example text eol=lf

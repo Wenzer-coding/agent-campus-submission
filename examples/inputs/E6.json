@@ -1,0 +1,6 @@
+{
+  "scenario_id": "E6",
+  "turns": ["年假有几天？"],
+  "fault_injection": "doc_read:1:timeout",
+  "note": "工具失败：doc_read 第一次调用注入超时，观察模型如何重试或兜底"
+}

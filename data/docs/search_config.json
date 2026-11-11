@@ -1,0 +1,6 @@
+{
+  "threshold": 0.2,
+  "title_weight": 2.0,
+  "top_k_default": 5,
+  "top_k_max": 10
+}

@@ -1,0 +1,6 @@
+{
+  "scenario_id": "E8_corpus_alt",
+  "turns": ["报销期限是多久？"],
+  "corpus_dir": "examples/corpus_alt",
+  "note": "换语料验证：D01 改为 45 天、删除 D02 后，答案与行为随数据改变（冲突消失，直接作答）"
+}

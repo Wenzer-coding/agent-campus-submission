@@ -1,0 +1,16 @@
+# 环境与密钥 — 绝不入库
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# 运行临时产物
+*.log
+.DS_Store
+Thumbs.db

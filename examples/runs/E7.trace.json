@@ -1,0 +1,46 @@
+{
+  "scenario_id": "E7",
+  "backend": "deepseek",
+  "model": "deepseek-chat",
+  "corpus_dir": "data/docs",
+  "corpus_hash": "cf6506ce41207c848d75ebcdb891b6e7d15721f504c1f20a8c7f9a1775ae9452",
+  "fault_injection": "",
+  "max_steps": 1,
+  "timestamp": "2026-11-11T17:23:30",
+  "python": "3.12.10",
+  "turns": [
+    {
+      "turn_index": 0,
+      "question": "报销期限是多久？",
+      "steps": [
+        {
+          "step_index": 1,
+          "turn_index": 0,
+          "tool_name": "doc_search",
+          "tool_args": {
+            "query": "报销期限 费用报销 提交时限",
+            "top_k": 10
+          },
+          "assistant_rationale": "我先检索制度库中关于报销期限的规定。",
+          "observation_summary": "命中 2 篇 ['D02', 'D01']；best_score=0.4333",
+          "observation_sha256": "913e016237a23ed9",
+          "next_action": "终止并交付（step_limit）",
+          "latency_ms": 0,
+          "steps_used": 1,
+          "steps_budget": 1,
+          "fault_hit": null,
+          "validation": null
+        }
+      ],
+      "final": {
+        "status": "step_limit",
+        "answer_text": "未能在步数上限（1 步）内完成任务。",
+        "citations": [],
+        "gaps": [],
+        "followup_question": null,
+        "incomplete_reason": "step_limit：已执行 1/1 步；工具调用统计：doc_search×1。"
+      }
+    }
+  ],
+  "total_steps": 1
+}

@@ -1,0 +1,176 @@
+{
+  "scenario_id": "E2",
+  "backend": "deepseek",
+  "model": "deepseek-chat",
+  "corpus_dir": "data/docs",
+  "corpus_hash": "cf6506ce41207c848d75ebcdb891b6e7d15721f504c1f20a8c7f9a1775ae9452",
+  "fault_injection": "",
+  "max_steps": 8,
+  "timestamp": "2026-11-11T17:22:59",
+  "python": "3.12.10",
+  "turns": [
+    {
+      "turn_index": 0,
+      "question": "报销期限是多久？",
+      "steps": [
+        {
+          "step_index": 1,
+          "turn_index": 0,
+          "tool_name": "doc_search",
+          "tool_args": {
+            "query": "报销期限 费用报销 提交时限",
+            "top_k": 10
+          },
+          "assistant_rationale": "我先检索制度库中关于报销期限的规定。",
+          "observation_summary": "命中 2 篇 ['D02', 'D01']；best_score=0.4333",
+          "observation_sha256": "913e016237a23ed9",
+          "next_action": "doc_list",
+          "latency_ms": 0,
+          "steps_used": 1,
+          "steps_budget": 8,
+          "fault_hit": null,
+          "validation": null
+        },
+        {
+          "step_index": 2,
+          "turn_index": 0,
+          "tool_name": "doc_list",
+          "tool_args": {},
+          "assistant_rationale": "我先检索制度库中关于报销期限的规定。",
+          "observation_summary": "文档清单 9 篇",
+          "observation_sha256": "61dc76db4ad48515",
+          "next_action": "doc_read",
+          "latency_ms": 0,
+          "steps_used": 2,
+          "steps_budget": 8,
+          "fault_hit": null,
+          "validation": null
+        },
+        {
+          "step_index": 3,
+          "turn_index": 0,
+          "tool_name": "doc_read",
+          "tool_args": {
+            "doc_id": "D01"
+          },
+          "assistant_rationale": "两份文档给出了不同期限，我需要读取原文确认是否有适用范围或优先级说明。",
+          "observation_summary": "读取 D01 成功（3 小节，版本 2024-06-01）",
+          "observation_sha256": "d2c6eb00112c5da2",
+          "next_action": "doc_read",
+          "latency_ms": 0,
+          "steps_used": 3,
+          "steps_budget": 8,
+          "fault_hit": null,
+          "validation": null
+        },
+        {
+          "step_index": 4,
+          "turn_index": 0,
+          "tool_name": "doc_read",
+          "tool_args": {
+            "doc_id": "D02"
+          },
+          "assistant_rationale": "两份文档给出了不同期限，我需要读取原文确认是否有适用范围或优先级说明。",
+          "observation_summary": "读取 D02 成功（3 小节，版本 2024-08-15）",
+          "observation_sha256": "d64d0794ae4a7fd4",
+          "next_action": "doc_search",
+          "latency_ms": 0,
+          "steps_used": 4,
+          "steps_budget": 8,
+          "fault_hit": null,
+          "validation": null
+        },
+        {
+          "step_index": 5,
+          "turn_index": 0,
+          "tool_name": "doc_search",
+          "tool_args": {
+            "query": "逾期不予受理 报销申请提交时间要求 财务制度",
+            "top_k": 10
+          },
+          "assistant_rationale": "两份文档均未声明适用范围或替代关系，我再换措辞做一次确认性检索，排除其他相关规定。",
+          "observation_summary": "命中 1 篇 ['D01']；best_score=0.2105",
+          "observation_sha256": "8b9cca60bede1e19",
+          "next_action": "doc_search",
+          "latency_ms": 0,
+          "steps_used": 5,
+          "steps_budget": 8,
+          "fault_hit": null,
+          "validation": null
+        },
+        {
+          "step_index": 6,
+          "turn_index": 0,
+          "tool_name": "doc_search",
+          "tool_args": {
+            "query": "差旅费用 报销时限 天数 规定",
+            "top_k": 10
+          },
+          "assistant_rationale": "两份文档均未声明适用范围或替代关系，我再换措辞做一次确认性检索，排除其他相关规定。",
+          "observation_summary": "命中 2 篇 ['D01', 'D02']；best_score=0.4848",
+          "observation_sha256": "680a385efb61df86",
+          "next_action": "submit_answer",
+          "latency_ms": 0,
+          "steps_used": 6,
+          "steps_budget": 8,
+          "fault_hit": null,
+          "validation": null
+        },
+        {
+          "step_index": 7,
+          "turn_index": 0,
+          "tool_name": "submit_answer",
+          "tool_args": {
+            "status": "needs_user_confirmation",
+            "answer_text": "制度库中关于报销期限存在两份不一致的规定，且两份文件都没有说明各自的适用范围、生效优先级或替代关系，因此无法直接给出唯一答案：\n\n1. 《差旅费用报销管理办法》（2024-06-01）：差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理。\n2. 《费用报销操作指引》（2024-08-15）：费用报销期限为费用发生后 15 天，超过该期限的申请将无法提交。\n\n请注意：版本日期较新并不代表优先级更高，不能仅凭日期判断以哪份为准。请确认您要办理的是差旅费用报销还是一般费用报销，以及应以哪份制度为准，我再给出明确结论。",
+            "citations": [
+              {
+                "doc_id": "D01",
+                "version_date": "2024-06-01",
+                "quote": "差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理。"
+              },
+              {
+                "doc_id": "D02",
+                "version_date": "2024-08-15",
+                "quote": "费用报销期限为费用发生后 15 天，超过该期限的申请将无法提交。"
+              }
+            ],
+            "followup_question": "请问您要报销的是差旅费用还是一般费用？以及公司目前以《差旅费用报销管理办法》（30 天）还是《费用报销操作指引》（15 天）为准？"
+          },
+          "assistant_rationale": "检索确认只有这两份文档涉及报销期限，且两者说法不一致、均未声明适用范围或优先级，属于未裁决冲突。",
+          "observation_summary": "submit_answer 校验通过，任务完成",
+          "observation_sha256": null,
+          "next_action": "终止并交付（needs_user_confirmation）",
+          "latency_ms": 0,
+          "steps_used": 7,
+          "steps_budget": 8,
+          "fault_hit": null,
+          "validation": {
+            "passed": true,
+            "failed_checks": []
+          }
+        }
+      ],
+      "final": {
+        "status": "needs_user_confirmation",
+        "answer_text": "制度库中关于报销期限存在两份不一致的规定，且两份文件都没有说明各自的适用范围、生效优先级或替代关系，因此无法直接给出唯一答案：\n\n1. 《差旅费用报销管理办法》（2024-06-01）：差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理。\n2. 《费用报销操作指引》（2024-08-15）：费用报销期限为费用发生后 15 天，超过该期限的申请将无法提交。\n\n请注意：版本日期较新并不代表优先级更高，不能仅凭日期判断以哪份为准。请确认您要办理的是差旅费用报销还是一般费用报销，以及应以哪份制度为准，我再给出明确结论。",
+        "citations": [
+          {
+            "doc_id": "D01",
+            "version_date": "2024-06-01",
+            "quote": "差旅费用报销申请应在费用发生后 30 天内提交，逾期不予受理。"
+          },
+          {
+            "doc_id": "D02",
+            "version_date": "2024-08-15",
+            "quote": "费用报销期限为费用发生后 15 天，超过该期限的申请将无法提交。"
+          }
+        ],
+        "gaps": [],
+        "followup_question": "请问您要报销的是差旅费用还是一般费用？以及公司目前以《差旅费用报销管理办法》（30 天）还是《费用报销操作指引》（15 天）为准？",
+        "incomplete_reason": null
+      }
+    }
+  ],
+  "total_steps": 7
+}
